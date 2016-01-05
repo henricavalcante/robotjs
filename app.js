@@ -1,12 +1,14 @@
 var five = require('johnny-five');
 var _ = require('lodash');
+var express = require('express');
+var app = express();
+var bodyParser = require('body-parser');
+var methodOverride = require('method-override');
+var http = require('http').Server(app);
+var io = require('socket.io')(http);
+var routes = require('./routes');
+var socket = require('./routes/socket');
 var board = new five.Board();
-
-var phrSensors = [
-  { direction: 'right', value: 0, pin: 'A0' },
-  { direction: 'front', value: 0, pin: 'A1' },
-  { direction: 'left', value: 0, pin: 'A2' },
-];
 
 var motors = [
   {
@@ -31,18 +33,6 @@ board.on('ready', function() {
   var led = new five.Led(13);
   led.strobe();
 
-  _.each(phrSensors, function(sensor) {
-
-    var phr = new five.Sensor({ pin: sensor.pin, freq: 250 });
-
-    board.repl.inject({ pot: phr });
-
-    phr.on('data', function() {
-      _.find(phrSensors, sensor).value = this.value;
-    });
-
-  });
-
   _.each(motors, function(motor) {
 
     motor.five = five.Motor({
@@ -60,35 +50,34 @@ board.on('ready', function() {
 function init() {
 
   var update = function() {
-    console.log(phrSensors);
 
-    var sensor = _.min(phrSensors, 'value');
+    var sensor = { direction: 'front' }
 
     var m = {};
     m.l = _.find(motors, { side: 'left' }).five;
     m.r = _.find(motors, { side: 'right' }).five;
 
-    var power = 255;
+    var power = 128;
 
-    if (sensor.value < 800) {
+    if (true) {
       switch(sensor.direction) {
-        case 'front':
-          console.log('Moving front');
-          m.r.forward(power);
-          m.l.forward(power);
-          break;
-        case 'left':
-          console.log('Moving left');
-          m.r.forward(power);
-          m.l.reverse(power);
-          break;
-        case 'right':
-          console.log('Moving right');
-          m.r.reverse(power);
-          m.l.forward(power);
-          break;
-        default:
-          break;
+          case 'front':
+              console.log('Moving front');
+              m.r.forward(power);
+              m.l.forward(power);
+              break;
+          case 'left':
+              console.log('Moving left');
+              m.r.forward(power);
+              m.l.reverse(power);
+              break;
+          case 'right':
+              console.log('Moving right');
+              m.r.reverse(power);
+              m.l.forward(power);
+              break;
+          default:
+              break;
       }
     } else {
       m.r.stop();
@@ -96,5 +85,24 @@ function init() {
     }
   };
 
-  setInterval(update, 300);
+  //setInterval(update, 300);
+
 }
+
+app.set('views', __dirname + '/views');
+app.set('view engine', 'jade');
+app.set('view options', {
+  layout: false
+});
+app.use(bodyParser.json({ type: 'application/*+json' }));
+app.use(methodOverride());
+app.use(express.static(__dirname + '/public'));
+
+app.get('/', routes.index);
+app.get('/partials/:name', routes.partials);
+
+app.get('*', routes.index);
+
+io.sockets.on('connection', socket);
+
+http.listen(8000);

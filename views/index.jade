@@ -1,0 +1,24 @@
+extends layout
+
+block body
+  h1 Angular Socket.io IM Demo App
+  div(ng-controller='RobotController')
+    | {{ temperature }}
+    br/
+    button#controlsNW.controls ↖
+    button#controlsN.controls ↑
+    button#controlsNE.controls ↗
+    br/
+    button#controlsW.controls ←
+    button#controlsC.controls ↺
+    button#controlsE.controls →
+    br/
+    button#controlsSW.controls ↙
+    button#controlsS.controls ↓
+    button#controlsSE.controls ↘
+
+  script(src='js/lib/angular/angular.min.js')
+  script(src='/socket.io/socket.io.js')
+  script(src='js/app.js')
+  script(src='js/services.js')
+  script(src='js/controllers.js')
