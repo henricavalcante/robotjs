@@ -1,5 +1,31 @@
-var five = require('johnny-five');
-var board = new five.Board();
+'use strict';
+
+const five = require('johnny-five');
+const board = new five.Board();
+
+const mosca = require('mosca');
+const moscaSettings = {
+  http: {
+    port: 3000
+  }
+};
+const server = new mosca.Server(moscaSettings);
+
+const actions = {
+  move: function (data) {
+    data = JSON.parse(data.toString());
+    Object.keys(data).map((side) => {
+      motors[side].five[data[side] > 0 ? 'forward': 'reverse'](Math.abs(data[side]));
+    });
+  }
+}
+
+server.on('published', function(packet, client) {
+  const action = packet.topic.split('/')[0];
+  if (actions[action]) {
+    actions[action](packet.payload);
+  }
+});
 
 const motors = {
   'right': {
@@ -18,36 +44,6 @@ const motors = {
   }
 };
 
-const move = function (direction, power) {
-
-  const mr = motors['right'].five;
-  const ml = motors['left'].five;
-
-  switch(direction) {
-      case 'forward':
-          console.log('Moving front');
-          mr.forward(power);
-          ml.forward(power);
-          break;
-      case 'backward':
-          mr.reverse(power);
-          ml.reverse(power);
-          break;
-      case 'left':
-          mr.stop();
-          ml.forward(power);
-          break;
-      case 'right':
-          mr.forward(power);
-          ml.stop();
-          break;
-      default:
-          mr.stop();
-          ml.stop();
-          break;
-  }
-
-}
 
 board.on('ready', function() {
 
@@ -63,8 +59,7 @@ board.on('ready', function() {
   });
 
   board.repl.inject({
-    move: move
+    actions: actions
   })
 });
 
-exports.move = move;
